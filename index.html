@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0a0b10" />
+    <title>Denoms — Arena</title>
+    <script type="module" crossorigin src="/assets/main-Ycx5nj6I.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/fighterView-BNciZ7d1.js">
+    <link rel="stylesheet" crossorigin href="/assets/fighterView-BzV8LQ54.css">
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="stage"></canvas>
+
+      <header id="hud" class="hidden">
+        <button class="fighter-bar" data-side="a">
+          <div class="elo"></div>
+          <div class="row">
+            <span class="name"></span><span class="weapon"></span>
+          </div>
+          <div class="track hp"><i></i></div>
+          <div class="track poise"><i></i></div>
+          <div class="fb-radar"></div>
+        </button>
+        <div class="clock"><span id="clock">0.0s</span></div>
+        <button class="fighter-bar" data-side="b">
+          <div class="elo"></div>
+          <div class="row">
+            <span class="name"></span><span class="weapon"></span>
+          </div>
+          <div class="track hp"><i></i></div>
+          <div class="track poise"><i></i></div>
+          <div class="fb-radar"></div>
+        </button>
+      </header>
+
+      <div id="sheet" class="hidden">
+        <div class="sheet-head">
+          <span id="sheet-title"></span>
+          <button id="sheet-close" aria-label="Close">CLOSE</button>
+        </div>
+        <div id="sheet-body"></div>
+      </div>
+
+      <button id="audio-btn" aria-label="Sound settings">VOL</button>
+      <div id="track-toast">
+        <span class="tt-label">Now playing</span>
+        <span class="tt-name"></span>
+        <button id="tt-like" class="ghost">LIKE</button>
+        <button id="tt-nope" class="ghost nope">NOPE</button>
+      </div>
+      <div id="audio-panel" class="hidden">
+        <label class="vol">
+          <span>SFX <b id="sfx-val">70</b></span>
+          <input id="vol-sfx" type="range" min="0" max="100" value="70" />
+        </label>
+        <label class="vol">
+          <span>MUSIC <b id="music-val">45</b></span>
+          <input id="vol-music" type="range" min="0" max="100" value="45" />
+        </label>
+        <div id="now-playing" class="hidden">
+          <div class="np-head">
+            <span class="np-label">NOW PLAYING</span>
+            <span class="np-name"></span>
+          </div>
+          <div class="np-vote">
+            <button class="np-up" aria-label="More tracks like this">&#9650; MORE</button>
+            <button class="np-down" aria-label="Fewer tracks like this">&#9660; LESS</button>
+          </div>
+        </div>
+        <button id="track-list-btn" class="ghost">ALL TRACKS</button>
+        <div id="track-list" class="hidden"></div>
+      </div>
+
+      <div id="intro" class="hidden">
+        <div id="intro-card" class="hidden">
+          <div class="ic-name"></div>
+          <div class="ic-line"></div>
+          <div class="ic-meta"></div>
+          <div class="ic-elo"></div>
+          <div class="ic-radar"></div>
+        </div>
+        <div id="intro-count" class="hidden"></div>
+      </div>
+
+      <div id="banner" class="hidden"></div>
+
+      <!-- Sits above the setup screen and is removed once the audio is decoded.
+           Present in the markup rather than created in JS so it paints on the
+           first frame; a loading screen that fades in after the thing it is
+           covering has already appeared is worse than none. -->
+      <section id="loading">
+        <h1>DENOMS</h1>
+        <div class="load-track"><i id="load-bar"></i></div>
+        <p id="load-status">LOADING AUDIO</p>
+        <p id="load-warn" class="hidden"></p>
+      </section>
+
+      <section id="setup">
+        <h1>DENOMS</h1>
+        <p class="tagline">One arena. No input.</p>
+        <!-- The two serials are still the whole state of a match, and the URL
+             still carries them, so they still live here. They are just no
+             longer something to be typed at: a menu that opens by asking for
+             two ten-character codes asks the one question a new player cannot
+             answer. -->
+        <input id="idA" type="hidden" value="" />
+        <input id="idB" type="hidden" value="" />
+        <button id="go">FIGHT</button>
+        <button id="open-tourney">ENTER TOURNAMENT</button>
+        <button id="open-broadcast" class="ghost">NOW PLAYING</button>
+        <button id="open-lobby" class="ghost">LOBBY &amp; RATINGS</button>
+      </section>
+
+      <section id="builder" class="hidden">
+        <div class="lb-head">
+          <h2>BUILDER</h2>
+          <button id="builder-close" aria-label="Close">CLOSE</button>
+        </div>
+        <p class="lb-note">
+          Pick what you want and it hunts for a serial that makes it. A denom is
+          hashed out of its ID, so there is nothing to invert — it guesses and
+          checks, very fast.
+        </p>
+        <div id="build-form"></div>
+        <button id="build-go">FIND A SERIAL</button>
+        <div id="build-out" class="hidden"></div>
+      </section>
+
+      <section id="tourney" class="hidden">
+        <div class="lb-head">
+          <h2>TOURNAMENT</h2>
+          <button id="tourney-close" aria-label="Close">CLOSE</button>
+        </div>
+        <div id="tq" class="lb-join">
+          <input id="tourney-id" type="text" placeholder="YOUR SERIAL"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false" />
+          <button id="tourney-go">QUEUE</button>
+        </div>
+        <!-- Building one is part of entering, not a separate errand: the only
+             reason to build a denom is to field it. -->
+        <div id="tq-build" class="tq-build">
+          <span class="tq-or">or</span>
+          <button id="open-builder" class="ghost">BUILD A DENOM</button>
+        </div>
+
+        <div id="tourney-stage"></div>
+        <div id="tourney-actions" class="tw-actions"></div>
+      </section>
+
+      <section id="lobby" class="hidden">
+        <div class="lb-head">
+          <h2>LOBBY</h2>
+          <button id="lobby-close" aria-label="Close">CLOSE</button>
+        </div>
+        <p class="lb-note">
+          Enter and you fight the last fifteen denoms that entered before you.
+          Nobody waits: two IDs decide a match, so the whole round resolves the
+          moment you join.
+        </p>
+        <div class="lb-join">
+          <input id="lobby-id" type="text" placeholder="YOUR SERIAL"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false" />
+          <button id="lobby-go">JOIN</button>
+        </div>
+        <div id="lobby-result"></div>
+        <h3 class="lb-h">STANDINGS</h3>
+        <div id="lobby-standings" class="lb-list"></div>
+        <h3 class="lb-h">RECENT MATCHES <span class="lb-sub">tap to watch</span></h3>
+        <div id="lobby-history" class="lb-list"></div>
+        <button id="lobby-clear" class="ghost">RESET LOBBY</button>
+      </section>
+
+      <div id="endbar" class="hidden">
+        <button id="continue" class="hidden">CONTINUE</button>
+        <button id="again">NEW MATCH</button>
+        <button id="share" class="ghost">COPY LINK</button>
+      </div>
+
+      <!-- The broadcast's end-of-match card. Nothing to press: it reports what
+           the fight was worth and says when the bracket is coming back. -->
+      <div id="wrapup" class="hidden"></div>
+    </div>
+      <div id="wipe" class="hidden"></div>
+  </body>
+</html>
