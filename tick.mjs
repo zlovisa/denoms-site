@@ -3641,7 +3641,7 @@ async function advance(store, now) {
 	const recent = await store.latestEpisodes(RECENT);
 	const airing = airingOf(recent, now);
 	const latest = recent[0] ?? null;
-	const coveredUntil = latest ? latest.startedAt + latest.durationMs : now;
+	const coveredUntil = recent.reduce((until, r) => Math.max(until, r.startedAt + r.durationMs), now);
 	if (!recent.some((r) => !r.rated && !isLive(r, now) && r.startedAt <= now) && coveredUntil - now >= SCHEDULE_HORIZON) return {
 		kind: "live",
 		episode: airing?.episode ?? latest?.episode ?? 0,
@@ -3674,38 +3674,36 @@ async function advance(store, now) {
 		pool: pool.length,
 		promoted
 	};
-	let last = latest;
+	let until = coveredUntil;
+	let number = latest?.episode ?? 0;
 	let first = null;
 	let written = 0;
 	while (written < MAX_STAGED_PER_TICK) {
-		const coveredUntil = Math.max(last ? last.startedAt + last.durationMs : now, now);
-		if (coveredUntil - now >= SCHEDULE_HORIZON) break;
-		const episode = (last?.episode ?? 0) + 1;
+		if (until - now >= SCHEDULE_HORIZON) break;
+		const episode = number + 1;
 		const roster = rankEntrants(drawRoster({
 			pool,
 			ratings
 		}, `broadcast:${episode}`), ratings);
 		const tournament = buildTournament(roster, {}, VERSION);
+		const schedule = scheduleOf(tournament, DEFAULT_PACING);
 		const row = {
 			episode,
-			startedAt: coveredUntil,
-			durationMs: scheduleOf(tournament, DEFAULT_PACING).durationMs,
+			startedAt: until,
+			durationMs: schedule.durationMs,
 			roster,
 			simVersion: VERSION,
 			rated: false
 		};
 		await store.putEpisode(row);
 		if (!first) first = row;
-		last = row;
+		until += schedule.durationMs;
+		number = episode;
 		written++;
 	}
-	if (!first) return airing ? {
+	if (!first) return {
 		kind: "live",
-		episode: airing.episode,
-		promoted
-	} : {
-		kind: "live",
-		episode: last?.episode ?? 0,
+		episode: airing?.episode ?? latest?.episode ?? 0,
 		promoted
 	};
 	return {
