@@ -3953,7 +3953,8 @@ async function advance(store, now) {
 		const { tournament } = rebuild(row);
 		const rated = applyTournament(tournament, ratings);
 		ratings = rated.records;
-		const out = Object.values(rated.records).map((r) => ({
+		const touched = new Set(row.roster);
+		const out = Object.values(rated.records).filter((r) => touched.has(r.serial)).map((r) => ({
 			serial: r.serial,
 			wins: r.wins,
 			losses: r.losses,
