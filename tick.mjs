@@ -3658,7 +3658,8 @@ const DEFAULT_PACING = Object.freeze({
 	resultHold: 4e3,
 	betweenMatches: 2e4,
 	betweenRounds: 26e3,
-	afterFinal: 3e4
+	afterFinal: 3e4,
+	preroll: 14e3
 });
 /** Ticks per second the sim runs at. A match's length is its tick count. */
 const TICK_HZ = 60;
@@ -3671,7 +3672,7 @@ const TICK_HZ = 60;
 */
 function scheduleOf(t, pacing = DEFAULT_PACING) {
 	const out = [];
-	let at = 0;
+	let at = pacing.preroll;
 	let lastRound = 0;
 	const pitFeedRounds = Math.max(0, t.rounds.length - 2);
 	for (let r = 0; r < t.rounds.length; r++) {
