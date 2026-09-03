@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 # Never let two ticks overlap. Both would read the same finished episode and
-# both would try to start the next one.
+# both would try to start the next one. A dispatch that arrives while the loop
+# below is still going waits for it instead.
 concurrency:
   group: tick
   cancel-in-progress: false
@@ -15,13 +16,22 @@ concurrency:
 jobs:
   tick:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node tick.mjs
+      - name: tick for fifty minutes
+        run: |
+          end=$(( $(date +%s) + 50 * 60 ))
+          until [ "$(date +%s)" -ge "$end" ]; do
+            # A tick that throws must not end the run. The next one is sixty
+            # seconds away and most failures here are a minute-long quota
+            # window; ending the loop turns a pause into hours of dead air.
+            node tick.mjs || echo "tick failed, carrying on"
+            sleep 60
+          done
         env:
           WIX_ADMIN_KEY: ${{ secrets.WIX_ADMIN_KEY }}
           WIX_SITE_ID: ${{ secrets.WIX_SITE_ID }}
